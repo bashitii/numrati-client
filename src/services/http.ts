@@ -88,7 +88,11 @@ async function send<T>(method: string, path: string, body?: Body, retry = true):
   if (res.status === 401 && token && retry && (await refreshSession())) return send<T>(method, path, body, false)
 
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new ApiError(res.status, data.error ?? 'Something went wrong')
+  if (!res.ok) {
+    // For rejected form fields the server lists the exact reasons (e.g. "Password must be at least 8 characters")
+    const reasons = Array.isArray(data.details) ? data.details.map((d: { message?: string }) => d.message).filter(Boolean) : []
+    throw new ApiError(res.status, reasons.length ? reasons.join(' · ') : data.error ?? 'Something went wrong')
+  }
   return data as T
 }
 

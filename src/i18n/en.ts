@@ -56,6 +56,7 @@ export const en = {
     haveAccount: 'Have an account?',
     required: 'Please fill in this field',
     mismatch: 'Passwords do not match',
+    passwordShort: 'Password must be at least 8 characters',
     otpHeader: 'Verify your number',
     otpTitle: 'Enter Verification Code',
     otpSent: 'A 6-digit code was sent to',

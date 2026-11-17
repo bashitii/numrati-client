@@ -58,6 +58,7 @@ export const ar: typeof en = {
     haveAccount: 'لديك حساب؟',
     required: 'يرجى تعبئة هذا الحقل',
     mismatch: 'كلمتا المرور غير متطابقتين',
+    passwordShort: 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل',
     otpHeader: 'تحقق من رقمك',
     otpTitle: 'أدخل رمز التحقق',
     otpSent: 'تم إرسال رمز مكون من 6 أرقام إلى',
