@@ -231,11 +231,12 @@ export function Register() {
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value })
   const missing = (key: keyof typeof form) => (touched && !form[key] ? t('auth.required') : undefined)
   const mismatch = touched && form.confirm && form.password !== form.confirm ? t('auth.mismatch') : undefined
+  const tooShort = touched && form.password && form.password.length < 8 ? t('auth.passwordShort') : undefined
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     setTouched(true)
-    if (!Object.values(form).every(Boolean) || form.password !== form.confirm) return
+    if (!Object.values(form).every(Boolean) || form.password.length < 8 || form.password !== form.confirm) return
     setBusy(true)
     setError(undefined)
     try {
@@ -263,7 +264,7 @@ export function Register() {
         <Field label={t('auth.fullName')} value={form.name} onChange={set('name')} error={missing('name')} autoComplete="name" />
         <Field label={t('auth.phone')} type="tel" dir="ltr" placeholder="+962 7X XXX XXXX" value={form.phone} onChange={set('phone')} error={missing('phone')} autoComplete="tel" />
         <Field label={t('auth.email')} type="email" dir="ltr" placeholder="example@email.com" value={form.email} onChange={set('email')} error={missing('email')} autoComplete="email" />
-        <Field label={t('auth.password')} type="password" value={form.password} onChange={set('password')} error={missing('password')} autoComplete="new-password" />
+        <Field label={t('auth.password')} type="password" value={form.password} onChange={set('password')} error={missing('password') ?? tooShort} autoComplete="new-password" />
         <Field label={t('auth.confirm')} type="password" value={form.confirm} onChange={set('confirm')} error={missing('confirm') ?? mismatch} autoComplete="new-password" />
         <div className="grid grid-cols-2 gap-3">
           {(['buyer', 'seller'] as const).map((value) => (
@@ -413,7 +414,7 @@ type IdFiles = { idFront: File | null; idBack: File | null; selfie: File | null 
 export function VerifyId() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { user, refresh } = useAuth()
+  const { user, refresh, logout } = useAuth()
   const [files, setFiles] = useState<IdFiles>({ idFront: null, idBack: null, selfie: null })
   const [touched, setTouched] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -421,6 +422,13 @@ export function VerifyId() {
   const status = user?.verificationStatus
   const pick = (key: keyof IdFiles) => (file: File | null) => setFiles((prev) => ({ ...prev, [key]: file }))
   const ready = Boolean(files.idFront && files.idBack && files.selfie)
+  // Until the photos are sent this step can't be skipped: no back arrow, no skip, only "Log out"
+  const required = status !== 'verified' && status !== 'pending'
+
+  const signOut = async () => {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   const submit = async () => {
     setTouched(true)
@@ -441,7 +449,7 @@ export function VerifyId() {
     <main className="min-h-dvh bg-offwhite pb-10">
       <header className="bg-white">
         <div className="mx-auto grid h-[76px] max-w-[520px] grid-cols-[40px_1fr_40px] items-center px-3">
-          <BackButton fallback="/profile" />
+          {required ? <span /> : <BackButton fallback="/profile" />}
           <h1 className="text-center text-[18px] font-bold">{t('auth.idTitle')}</h1>
         </div>
       </header>
@@ -484,10 +492,12 @@ export function VerifyId() {
             <Button className="mt-4" onClick={submit} disabled={busy}>
               {busy ? t('common.loading') : t('auth.submitReview')}
             </Button>
-            <Button variant="secondary" to="/home" className="mt-3 !font-medium">
-              {t('common.skip')}
-            </Button>
             <p className="mt-3 text-center text-[11px] text-muted">{t('auth.reviewTime')}</p>
+            <p className="mt-4 text-center">
+              <button onClick={signOut} className="text-[12px] font-semibold text-muted hover:text-danger hover:underline">
+                {t('profile.logout')}
+              </button>
+            </p>
           </>
         )}
       </div>

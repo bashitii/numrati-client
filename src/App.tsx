@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppLayout } from './components/AppLayout'
 import { Assistant } from './pages/Assistant'
 import { Chats, ChatConversation, Favorites, Notifications, Profile } from './pages/Account'
@@ -9,9 +9,18 @@ import { ErrorPage } from './pages/ErrorPage'
 import { EstimateInputPage, EstimateResultPage, SimilarPlates } from './pages/Estimate'
 import { PlateDetails, Success } from './pages/PlateDetails'
 import { AddListing, SellerAnalytics, SellerDashboard } from './pages/Seller'
-import { RequireAuth } from './store/auth'
+import { RequireAuth, useAuth } from './store/auth'
 
 export default function App() {
+  const { user } = useAuth()
+  const { pathname } = useLocation()
+
+  // ID verification can't be skipped: a signed-in user who hasn't sent their ID photos yet
+  // (new account, or photos rejected by an admin) is sent back to the ID page from every other page.
+  // They can still log out there. Admins are never affected.
+  const mustSendId = user && user.role !== 'admin' && (user.verificationStatus === 'unverified' || user.verificationStatus === 'rejected')
+  if (mustSendId && pathname !== '/verify-id') return <Navigate to="/verify-id" replace />
+
   return (
     <Routes>
       <Route path="/" element={<Splash />} />
