@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { LogoMark } from '../components/Logo'
 import { Plate } from '../components/Plate'
-import { BackButton, Button, cx, Field, FileDrop, LanguageToggle } from '../components/ui'
+import { PhotoCapture } from '../components/CameraCapture'
+import { BackButton, Button, cx, Field, LanguageToggle } from '../components/ui'
 import { errorText } from '../lib/hooks'
 import { forgotPassword, resendCode, submitVerification } from '../services/api'
 import { useAuth } from '../store/auth'
@@ -472,9 +473,9 @@ export function VerifyId() {
           <>
             {status === 'rejected' && <p className="mt-3 rounded-[12px] bg-danger/8 px-3 py-2.5 text-[12px] text-danger">{t('more.verifyRejected')}</p>}
             <div className="mt-4 space-y-4">
-              <FileDrop icon={IdCard} title={t('auth.idFront')} button={t('common.upload')} onFile={pick('idFront')} />
-              <FileDrop icon={CreditCard} title={t('auth.idBack')} button={t('common.upload')} onFile={pick('idBack')} />
-              <FileDrop icon={ScanFace} title={t('auth.selfie')} button={t('common.upload')} onFile={pick('selfie')} />
+              <PhotoCapture icon={IdCard} title={t('auth.idFront')} name="id-front" facing="environment" onFile={pick('idFront')} />
+              <PhotoCapture icon={CreditCard} title={t('auth.idBack')} name="id-back" facing="environment" onFile={pick('idBack')} />
+              <PhotoCapture icon={ScanFace} title={t('auth.selfie')} name="selfie" facing="user" onFile={pick('selfie')} />
             </div>
             {touched && !ready && <p className="mt-3 text-[12px] text-danger">{t('auth.required')}</p>}
             <div className="mt-4">
