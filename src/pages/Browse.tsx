@@ -6,9 +6,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { FeaturedCard, GridCard, RecentRow, ResultRow } from '../components/PlateCards'
 import { BackButton, Button, Chip, Container, cx, LanguageToggle, SectionHead, SkeletonCards } from '../components/ui'
 import { useAsync } from '../lib/hooks'
-import { getPlates } from '../services/api'
+import { getPlates, searchPlates } from '../services/api'
 import { useAuth } from '../store/auth'
-import type { Category, PlateQuery, SortKey } from '../types'
+import type { Category, Plate, PlateQuery, SortKey } from '../types'
 import { ErrorState } from './ErrorPage'
 
 const homeChips: (Category | 'all')[] = ['all', 'special', 'sequential', 'repeated']
@@ -164,7 +164,28 @@ export function Search() {
     maxPrice: filter === 'under' ? 5000 : undefined,
     category: filter === 'special' ? 'special' : undefined,
   }
-  const { data, loading, error, retry } = useAsync(() => getPlates(query), [q, sort, filter])
+  const { data, loading, error, retry } = useAsync(() => searchPlates(query), [q, sort, filter])
+
+  // "Show more" adds the next 20 plates. Pages loaded for an older search are ignored.
+  const searchKey = `${q}|${sort}|${filter}`
+  const [more, setMore] = useState<{ key: string; items: Plate[]; page: number; hasMore: boolean }>()
+  const [loadingMore, setLoadingMore] = useState(false)
+  const extra = more?.key === searchKey ? more : undefined
+  const items = [...(data?.items ?? []), ...(extra?.items ?? [])]
+  const hasMore = extra ? extra.hasMore : Boolean(data?.hasMore)
+
+  const showMore = async () => {
+    setLoadingMore(true)
+    try {
+      const page = (extra?.page ?? 1) + 1
+      const next = await searchPlates(query, page)
+      setMore({ key: searchKey, items: [...(extra?.items ?? []), ...next.items], page, hasMore: next.hasMore })
+    } catch {
+      // the button stays, so the user can simply try again
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   const reset = () => {
     setInput('')
@@ -200,7 +221,7 @@ export function Search() {
       </div>
 
       <Container className="pt-5">
-        {data && data.length === 0 && !loading ? (
+        {data && data.items.length === 0 && !loading ? (
           <div className="animate-rise mx-auto flex max-w-[350px] flex-col items-center py-12 text-center">
             <div className="animate-pop relative grid size-[160px] place-items-center rounded-full border-2 border-line/70 bg-[#f4f2ec]">
               <span className="animate-pulse-ring absolute inset-3 rounded-full border border-gold/30" />
@@ -220,7 +241,7 @@ export function Search() {
         ) : (
           <>
             <div className="flex items-center justify-between">
-              <p className="text-[16px] font-bold">{t('search.results', { count: data?.length ?? 0 })}</p>
+              <p className="text-[16px] font-bold">{t('search.results', { count: data?.total ?? 0 })}</p>
               <button
                 onClick={() => setSort(sorts[(sorts.indexOf(sort) + 1) % sorts.length])}
                 className="press group inline-flex h-[36px] items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-[12px] hover:border-gold"
@@ -248,11 +269,21 @@ export function Search() {
               ) : loading ? (
                 <SkeletonCards />
               ) : (
-                <div key={`${q}|${sort}|${filter}`} className="stagger grid gap-2.5 lg:grid-cols-2 lg:gap-4">
-                  {data?.map((p) => (
-                    <ResultRow key={p.id} plate={p} />
-                  ))}
-                </div>
+                <>
+                  <div key={searchKey} className="stagger grid gap-2.5 lg:grid-cols-2 lg:gap-4">
+                    {items.map((p) => (
+                      <ResultRow key={p.id} plate={p} />
+                    ))}
+                  </div>
+                  {hasMore && (
+                    <div className="mt-5 flex flex-col items-center gap-1.5">
+                      <Button variant="secondary" onClick={showMore} disabled={loadingMore} className="max-w-[280px]">
+                        {loadingMore ? t('common.loading') : t('search.showMore')}
+                      </Button>
+                      <p className="text-[11px] text-muted">{t('search.shown', { shown: items.length, total: data?.total ?? 0 })}</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </>

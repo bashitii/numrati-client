@@ -89,6 +89,8 @@ export const ar: typeof en = {
   },
   search: {
     results: '{{count}} نتيجة',
+    showMore: 'عرض المزيد',
+    shown: 'عرض {{shown}} من {{total}}',
     sort: 'ترتيب',
     latest: 'الأحدث',
     priceHigh: 'الأعلى سعراً',

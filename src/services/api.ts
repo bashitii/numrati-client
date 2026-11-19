@@ -46,6 +46,10 @@ export async function getPlates(query: PlateQuery = {}) {
   return res.items
 }
 
+/** One page of search results, with how many plates match in total */
+export const searchPlates = (query: PlateQuery, page = 1, limit = 20) =>
+  http.get<{ items: Plate[]; total: number; hasMore: boolean; page: number }>(`/plates${qs({ ...query, page, limit })}`)
+
 /** Plate details, or null when it does not exist / is not public */
 export async function getPlate(id: string) {
   try {

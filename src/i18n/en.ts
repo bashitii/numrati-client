@@ -87,6 +87,8 @@ export const en = {
   },
   search: {
     results: '{{count}} Results',
+    showMore: 'Show more',
+    shown: 'Showing {{shown}} of {{total}}',
     sort: 'Sort',
     latest: 'Latest',
     priceHigh: 'Highest price',
