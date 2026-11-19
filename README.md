@@ -3,7 +3,7 @@
 > Part of **Numrati | نمرتي**, a marketplace for distinctive Jordanian license plates (HTU Capstone 2).
 > Companion repository: [bashitii/numrati-server](https://github.com/bashitii/numrati-server), the Express API this website talks to.
 
-React + TypeScript + Vite + Tailwind CSS. The site is bilingual (Arabic RTL and English) and talks only to the Numrati API (`../Capstone2-server`). It never connects to Supabase directly.
+React + TypeScript + Vite + Tailwind CSS. The site is bilingual (Arabic RTL and English) and talks only to the Numrati API (`../numrati-server`). It never connects to Supabase directly.
 
 ## Run it
 
@@ -12,7 +12,7 @@ Double-click **`Start Numrati.command`**. It starts the API and the website toge
 Or by hand, in two terminals:
 
 ```bash
-cd ../Capstone2-server && npm run dev
+cd ../numrati-server && npm run dev
 ```
 ```bash
 npm install && npm run dev
@@ -31,12 +31,13 @@ src/
   pages/              screens: Auth, Browse, PlateDetails, Account, Seller, Estimate, Admin, Assistant
   components/         shared UI (buttons, fields, plate artwork, cards, layout)
   i18n/               Arabic and English text
-server/assistant.ts   "Sanadak" AI assistant (Gemini), served by the Vite dev server at /api/chat
 ```
 
 ## Settings
 
-`.env.example` lists the optional settings: `GEMINI_API_KEY` for the assistant, and `VITE_API_URL` when the API is hosted somewhere other than `localhost:4000`.
+`.env.example` lists the optional setting `VITE_API_URL`, for when the API is hosted somewhere other than `localhost:4000`.
+
+The Sanadak assistant page (`pages/Assistant.tsx`) sends questions to the API at `/api/chat`. The API passes them to the Sanadak agent in Google Cloud (Conversational Agents), so the website needs no AI key.
 
 ## Build
 
@@ -49,7 +50,7 @@ npm run build   # type-checks, then writes the static site to dist/
 ```mermaid
 flowchart LR
   B[Browser<br/>React website] -- "REST /api + login token" --> S[Express API<br/>business rules]
-  B -- "/api/chat" --> A[Sanadak assistant<br/>Gemini]
+  S -- "/api/chat questions" --> A[Sanadak agent<br/>GCP Conversational Agents]
   S -- "SQL (DATABASE_URL)" --> D[(Supabase Postgres)]
   S -- "sign-up, login, token check" --> AU[Supabase Auth]
   S -- "upload + signed links" --> ST[Supabase Storage<br/>ID photos, ownership docs]
