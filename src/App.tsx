@@ -2,7 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppLayout } from './components/AppLayout'
 import { Assistant } from './pages/Assistant'
 import { Chats, ChatConversation, Favorites, Notifications, Profile } from './pages/Account'
-import { AdminDashboard, AdminListings, AdminLogin, AdminReports, AdminUsers } from './pages/Admin'
+import { AdminDashboard, AdminDvld, AdminListings, AdminLogin, AdminReports, AdminUsers } from './pages/Admin'
 import { Login, Onboarding, Otp, Register, Splash, VerifyId } from './pages/Auth'
 import { Home, Search } from './pages/Browse'
 import { ErrorPage } from './pages/ErrorPage'
@@ -55,6 +55,7 @@ export default function App() {
       <Route path="/admin/users" element={<RequireAuth admin><AdminUsers /></RequireAuth>} />
       <Route path="/admin/listings" element={<RequireAuth admin><AdminListings /></RequireAuth>} />
       <Route path="/admin/reports" element={<RequireAuth admin><AdminReports /></RequireAuth>} />
+      <Route path="/admin/dvld" element={<RequireAuth admin><AdminDvld /></RequireAuth>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

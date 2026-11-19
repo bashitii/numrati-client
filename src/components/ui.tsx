@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
-import { ArrowLeft, ArrowRight, BadgeCheck, Camera, CircleCheck, FileUp } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BadgeCheck, Camera, CircleCheck, FileUp, Landmark, UserRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -76,6 +76,7 @@ const badgeTones = {
   red: 'bg-danger/10 text-danger',
   yellow: 'bg-warning/15 text-[#c9960c]',
   purple: 'bg-purple/12 text-purple',
+  blue: 'bg-sky-500/12 text-sky-700',
 }
 
 export function Badge({ tone = 'gold', children, className }: { tone?: keyof typeof badgeTones; children: ReactNode; className?: string }) {
@@ -91,6 +92,20 @@ export function VerifiedBadge() {
   return (
     <Badge tone="green">
       <BadgeCheck size={12} strokeWidth={2.4} aria-hidden /> {t('common.verified')}
+    </Badge>
+  )
+}
+
+/** "DVLD" for numbers DVLD still sells, "Owned" for plates a person resells */
+export function OwnershipBadge({ ownership, className }: { ownership: 'owned' | 'dvld'; className?: string }) {
+  const { t } = useTranslation()
+  return ownership === 'dvld' ? (
+    <Badge tone="blue" className={className}>
+      <Landmark size={12} strokeWidth={2.4} aria-hidden /> {t('ownership.dvld')}
+    </Badge>
+  ) : (
+    <Badge tone="gold" className={className}>
+      <UserRound size={12} strokeWidth={2.4} aria-hidden /> {t('ownership.owned')}
     </Badge>
   )
 }

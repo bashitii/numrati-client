@@ -1,10 +1,10 @@
-import { BadgeCheck, CalendarClock, CircleCheckBig, Home, Loader2, MessageCircle, ShieldCheck } from 'lucide-react'
+import { BadgeCheck, CalendarClock, CircleCheckBig, Home, Landmark, Loader2, MessageCircle, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate, useParams, Navigate } from 'react-router-dom'
 import { HeartButton } from '../components/PlateCards'
 import { Plate as PlateArt } from '../components/Plate'
-import { BackButton, Avatar, Button, Card, Container, Price, SkeletonCards } from '../components/ui'
+import { BackButton, Avatar, Button, Card, Container, OwnershipBadge, Price, SkeletonCards } from '../components/ui'
 import { errorText, formatNumber, useAsync, useCountUp, useTilt } from '../lib/hooks'
 import { getPlate, requestPurchase, startConversation } from '../services/api'
 import { useAuth } from '../store/auth'
@@ -14,6 +14,33 @@ import { ErrorState } from './ErrorPage'
 
 function CountUp({ to }: { to: number }) {
   return <>{formatNumber(useCountUp(to))}</>
+}
+
+/** DVLD plates have no seller: this explains how to buy the number directly at DVLD */
+function DvldBuyBox({ plate }: { plate: Plate }) {
+  const { t } = useTranslation()
+  const steps = [t('ownership.step1'), t('ownership.step2', { code: plate.code, price: formatNumber(plate.price) }), t('ownership.step3')]
+  return (
+    <div id="dvld-buy" className="scroll-mt-24">
+    <Card className="border border-sky-500/25 p-5">
+      <h2 className="flex items-center gap-2 text-[16px] font-bold">
+        <span className="grid size-9 place-items-center rounded-[12px] bg-sky-500/12 text-sky-700">
+          <Landmark size={18} aria-hidden />
+        </span>
+        {t('ownership.howTitle')}
+      </h2>
+      <ol className="mt-4 space-y-3">
+        {steps.map((step, i) => (
+          <li key={i} className="flex gap-3 text-[13px] leading-relaxed">
+            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-sky-500/12 text-[12px] font-bold text-sky-700">{i + 1}</span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-4 rounded-[12px] bg-offwhite px-3 py-2.5 text-[11px] text-muted">{t('ownership.note')}</p>
+    </Card>
+    </div>
+  )
 }
 
 const PlateSkeleton = () => (
@@ -51,19 +78,24 @@ function PlateDetailsContent() {
     )
 
   const { plate, seller, isOwner } = data
+  const dvld = plate.ownership === 'dvld'
   const here = `/plates/${plate.id}`
   const stats = [
     { value: <CountUp to={plate.price} />, label: `${t('details.price')} JD` },
     { value: <CountUp to={plate.views} />, label: t('details.views') },
     { value: <CountUp to={plate.interested} />, label: t('details.interested') },
-    { value: plate.verified ? <BadgeCheck size={18} className="mx-auto animate-pop" aria-hidden /> : '–', label: plate.verified ? t('details.verified') : t('details.unverified') },
+    dvld
+      ? { value: <Landmark size={18} className="mx-auto animate-pop" aria-hidden />, label: t('ownership.official') }
+      : { value: plate.verified ? <BadgeCheck size={18} className="mx-auto animate-pop" aria-hidden /> : '–', label: plate.verified ? t('details.verified') : t('details.unverified') },
   ]
   const rows = [
     { label: t('details.number'), value: <span dir="ltr">{plate.code.replace('-', ' - ')}</span> },
+    { label: t('ownership.type'), value: <OwnershipBadge ownership={plate.ownership} /> },
     { label: t('details.category'), value: t(`category.${plate.category}`) },
     { label: t('details.governorate'), value: t(`governorate.${plate.governorate}`) },
-    { label: t('details.price'), value: <Price value={plate.price} className="text-gold" /> },
-    ...(plate.marketValue ? [{ label: t('details.market'), value: <span dir="ltr">~{formatNumber(plate.marketValue)} JD</span> }] : []),
+    { label: dvld ? t('ownership.officialPrice') : t('details.price'), value: <Price value={plate.price} className="text-gold" /> },
+    // For DVLD plates the price already is the official value
+    ...(plate.marketValue && !dvld ? [{ label: t('details.market'), value: <span dir="ltr">~{formatNumber(plate.marketValue)} JD</span> }] : []),
   ]
 
   // Guests sign in first and come back to this plate
@@ -98,7 +130,17 @@ function PlateDetailsContent() {
   }
 
   const unavailable = plate.status !== 'active'
-  const actions = isOwner ? (
+  const actions = dvld ? (
+    // No seller to message or send a request to: the plate is bought at DVLD
+    <div className="flex gap-3">
+      <Button variant="secondary" className="flex-1 lg:hidden" onClick={() => document.getElementById('dvld-buy')?.scrollIntoView({ behavior: 'smooth' })}>
+        <Landmark size={18} aria-hidden /> {t('ownership.howShort')}
+      </Button>
+      <span className="grid h-[52px] w-[72px] shrink-0 place-items-center rounded-[14px] border border-line bg-offwhite lg:w-full">
+        <HeartButton id={plate.id} size={22} />
+      </span>
+    </div>
+  ) : isOwner ? (
     <Button variant="secondary" to="/seller">
       {t('more.yourListing')} · {t(`listingStatus.${plate.status}`)}
     </Button>
@@ -170,6 +212,17 @@ function PlateDetailsContent() {
           </dl>
         </Card>
         <div className="space-y-4">
+          {dvld ? (
+            <Card className="flex items-center gap-3.5 p-4">
+              <span className="grid size-[52px] shrink-0 place-items-center rounded-full border-[1.5px] border-sky-500/40 bg-sky-500/10 text-sky-700">
+                <Landmark size={24} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-bold">{seller.name}</p>
+                <p className="text-[12px] text-muted">{t('ownership.dvldSeller')}</p>
+              </div>
+            </Card>
+          ) : (
           <Card className="flex items-center gap-3.5 p-4">
             <Avatar letter={seller.name.charAt(0)} size={52} />
             <div className="min-w-0 flex-1">
@@ -192,6 +245,8 @@ function PlateDetailsContent() {
               </Link>
             )}
           </Card>
+          )}
+          {dvld && <DvldBuyBox plate={plate} />}
           <div className="hidden lg:block">{actions}</div>
         </div>
       </Container>

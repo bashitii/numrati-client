@@ -1,13 +1,13 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
+import { useRef, useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plate } from '../components/Plate'
+import { Plate, PlateTile } from '../components/Plate'
 import { Avatar, Badge, Button, Card, Container, cx, Field, LanguageToggle, PageHeader, Price } from '../components/ui'
 import { errorText, formatNumber, useAsync, useTimeAgo } from '../lib/hooks'
 import { admin } from '../services/api'
 import { useAuth } from '../store/auth'
-import type { AdminActivity, ReportStatus } from '../types'
+import type { AdminActivity, DvldPlate, ReportStatus } from '../types'
 import { FormError } from './Auth'
 import { ErrorState } from './ErrorPage'
 
@@ -116,6 +116,7 @@ export function AdminDashboard() {
     { icon: '👤', tint: 'bg-gold-tint', title: t('admin.reviewUsers'), count: data?.pendingVerifications ?? 0, color: 'text-gold', badge: 'bg-gold', to: '/admin/users' },
     { icon: '🏷️', tint: 'bg-success/12', title: t('admin.approveListings'), count: data?.pendingListings ?? 0, color: 'text-success', badge: 'bg-success', to: '/admin/listings' },
     { icon: '🚨', tint: 'bg-danger/10', title: t('admin.manageReports'), count: data?.openReports ?? 0, color: 'text-danger', badge: 'bg-danger', to: '/admin/reports' },
+    { icon: '🏛️', tint: 'bg-sky-500/12', title: t('dvldAdmin.card'), count: data?.dvldListings ?? 0, color: 'text-sky-700', badge: 'bg-sky-600', to: '/admin/dvld' },
     { icon: '🏠', tint: 'bg-purple/12', title: t('states.home'), count: 0, color: 'text-purple', badge: '', to: '/home' },
   ]
   const describe = (a: AdminActivity) => t(`more.activity.${a.action}`, { target: a.details?.code ?? a.details?.name ?? a.targetId, defaultValue: a.action.replaceAll('_', ' ') })
@@ -503,6 +504,259 @@ export function AdminReports() {
           })}
         </Container>
       </div>
+    </main>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// DVLD plates: numbers DVLD still sells. The DVLD account can't sign in, so admins manage them here.
+// ---------------------------------------------------------------------------
+
+/** Turns pasted Excel rows or a CSV file into plates: the plate number, then its price, on each line */
+function parsePlateList(text: string) {
+  const plates: { code: string; price: number }[] = []
+  for (const line of text.split(/\r?\n/)) {
+    const cells = line.split(/[,\t;]/).map((c) => c.trim().replace(/^"|"$/g, ''))
+    const at = cells.findIndex((c) => /^\d{1,2}-\d{1,5}$/.test(c))
+    if (at < 0) continue // blank lines and header rows like "Plate, Price"
+    const price = cells
+      .slice(at + 1)
+      .map((c) => Number(c.replace(/[^\d.]/g, '')))
+      .find((n) => n >= 50)
+    plates.push({ code: cells[at], price: price ?? Number.NaN })
+  }
+  return plates
+}
+
+type AddResult = { added: number; skipped: { code: string; reason: string }[] }
+
+function AddResultBox({ result }: { result?: AddResult }) {
+  const { t } = useTranslation()
+  if (!result) return null
+  return (
+    <div className="animate-rise mt-3 rounded-[12px] bg-offwhite px-3 py-2.5 text-[12px]">
+      <p className="font-bold">
+        <span className="text-success">{t('dvldAdmin.resultAdded', { count: result.added })}</span>
+        {result.skipped.length > 0 && <span className="text-warning"> · {t('dvldAdmin.resultSkipped', { count: result.skipped.length })}</span>}
+      </p>
+      {result.skipped.length > 0 && (
+        <ul className="mt-1.5 max-h-[140px] space-y-0.5 overflow-y-auto text-muted">
+          {result.skipped.map((s, i) => (
+            <li key={i}>
+              <span dir="ltr" className="font-semibold text-ink">{s.code || '—'}</span>: {s.reason}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function DvldRow({ plate, onChanged }: { plate: DvldPlate; onChanged: () => void }) {
+  const { t } = useTranslation()
+  const [price, setPrice] = useState(String(plate.price))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+  const changed = Number(price) !== plate.price && Number(price) >= 50
+
+  const run = async (action: () => Promise<unknown>) => {
+    setBusy(true)
+    setError(undefined)
+    try {
+      await action()
+      onChanged()
+    } catch (err) {
+      setError(errorText(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card className="p-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <PlateTile code={plate.code} className="h-[46px] w-[76px] shrink-0 !rounded-[10px] !p-1" />
+        <div className="min-w-[90px] flex-1">
+          <p dir="ltr" className="text-[14px] font-bold rtl:text-end">{plate.code}</p>
+          <p className="text-[11px] text-muted">
+            {t(`category.${plate.category}`)} · {formatNumber(plate.views)} 👁
+          </p>
+        </div>
+        <label className="flex items-center gap-2 text-[11px] text-muted">
+          {t('dvldAdmin.changePrice')}
+          <input
+            dir="ltr"
+            inputMode="numeric"
+            value={price}
+            onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))}
+            className="h-9 w-[100px] rounded-[10px] border border-line bg-offwhite px-2.5 text-[13px] font-bold text-ink outline-none focus:border-gold"
+          />
+        </label>
+        <button
+          disabled={!changed || busy}
+          onClick={() => run(() => admin.updateDvldPrice(plate.id, Number(price)))}
+          className="press h-9 rounded-[10px] bg-gold px-3 text-[12px] font-bold text-ink disabled:bg-line disabled:text-muted"
+        >
+          {t('dvldAdmin.save')}
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => window.confirm(t('dvldAdmin.confirmRemove', { code: plate.code })) && run(() => admin.removeDvldPlate(plate.id))}
+          className="press h-9 rounded-[10px] bg-danger/10 px-3 text-[12px] font-bold text-danger hover:bg-danger/20"
+        >
+          {t('dvldAdmin.remove')}
+        </button>
+      </div>
+      {error && <p className="mt-2 text-[11px] text-danger">{error}</p>}
+    </Card>
+  )
+}
+
+export function AdminDvld() {
+  const { t } = useTranslation()
+  // single plate
+  const [code, setCode] = useState('')
+  const [price, setPrice] = useState('')
+  const [oneBusy, setOneBusy] = useState(false)
+  const [oneResult, setOneResult] = useState<AddResult>()
+  const [oneError, setOneError] = useState<string>()
+  // a pasted / uploaded list
+  const [text, setText] = useState('')
+  const [listBusy, setListBusy] = useState(false)
+  const [listResult, setListResult] = useState<AddResult>()
+  const [listError, setListError] = useState<string>()
+  const fileInput = useRef<HTMLInputElement>(null)
+  // the listed plates
+  const [search, setSearch] = useState('')
+  const [version, setVersion] = useState(0)
+  const [pages, setPages] = useState(1)
+  const reload = () => setVersion((v) => v + 1)
+  const list = useAsync(async () => {
+    const all = await Promise.all(Array.from({ length: pages }, (_, i) => admin.dvldPlates(search, i + 1)))
+    return { items: all.flatMap((p) => p.items), total: all[0]?.total ?? 0 }
+  }, [search, version, pages])
+
+  const addOne = async (e: FormEvent) => {
+    e.preventDefault()
+    setOneBusy(true)
+    setOneError(undefined)
+    try {
+      const result = await admin.addDvldPlates([{ code: code.trim(), price: Number(price) }])
+      setOneResult(result)
+      if (result.added) {
+        setCode('')
+        setPrice('')
+        reload()
+      }
+    } catch (err) {
+      setOneError(errorText(err))
+    } finally {
+      setOneBusy(false)
+    }
+  }
+
+  const addList = async () => {
+    const plates = parsePlateList(text)
+    if (!plates.length) return setListError(t('dvldAdmin.nothingToAdd'))
+    setListBusy(true)
+    setListError(undefined)
+    try {
+      const result = await admin.addDvldPlates(plates)
+      setListResult(result)
+      if (result.added) {
+        setText('')
+        reload()
+      }
+    } catch (err) {
+      setListError(errorText(err))
+    } finally {
+      setListBusy(false)
+    }
+  }
+
+  const readFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) setText(await file.text())
+    e.target.value = ''
+  }
+
+  return (
+    <main className="min-h-dvh bg-offwhite pb-10">
+      <PageHeader title={`🏛️ ${t('dvldAdmin.title')}`} back="/admin/dashboard" />
+      <Container className="max-w-[820px] space-y-4 pt-4">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="p-5">
+            <h2 className="text-[15px] font-bold">{t('dvldAdmin.addOne')}</h2>
+            <form onSubmit={addOne} className="mt-3 space-y-3">
+              <Field label={t('dvldAdmin.number')} dir="ltr" placeholder="31-1234" value={code} onChange={(e) => setCode(e.target.value.replace(/[^\d-]/g, ''))} />
+              <Field label={t('dvldAdmin.price')} dir="ltr" inputMode="numeric" placeholder="1000" value={price} onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))} />
+              <Button type="submit" disabled={oneBusy || !code || !price}>
+                {oneBusy ? t('common.loading') : t('dvldAdmin.add')}
+              </Button>
+            </form>
+            <FormError message={oneError} />
+            <AddResultBox result={oneResult} />
+          </Card>
+
+          <Card className="p-5">
+            <h2 className="text-[15px] font-bold">{t('dvldAdmin.addMany')}</h2>
+            <p className="mt-1 text-[11px] text-muted">{t('dvldAdmin.manyHint')}</p>
+            <textarea
+              dir="ltr"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={6}
+              placeholder={'31-1234, 1000\n44-25, 120000\n36-99989, 3000'}
+              className="mt-3 w-full rounded-[12px] border border-line bg-offwhite p-3 font-mono text-[12px] outline-none focus:border-gold"
+            />
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <Button variant="secondary" onClick={() => fileInput.current?.click()} className="!min-h-[44px] !text-[13px]">
+                {t('dvldAdmin.upload')}
+              </Button>
+              <Button onClick={addList} disabled={listBusy} className="!min-h-[44px] !text-[13px]">
+                {listBusy ? t('common.loading') : t('dvldAdmin.addList')}
+              </Button>
+            </div>
+            <input ref={fileInput} type="file" accept=".csv,.txt,text/csv,text/plain" hidden onChange={readFile} />
+            <div className="mt-2">
+              <FormError message={listError} />
+            </div>
+            <AddResultBox result={listResult} />
+          </Card>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <h2 className="text-[16px] font-bold">{t('dvldAdmin.listTitle', { count: list.data?.total ?? 0 })}</h2>
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPages(1)
+            }}
+            placeholder={t('dvldAdmin.searchPh')}
+            aria-label={t('dvldAdmin.searchPh')}
+            className="h-10 w-[220px] rounded-[12px] border border-line bg-white px-3 text-[13px] outline-none focus:border-gold"
+          />
+        </div>
+        {list.error ? (
+          <ErrorState onRetry={list.retry} />
+        ) : !list.data ? (
+          <Card className="p-8 text-center text-muted">{t('common.loading')}</Card>
+        ) : list.data.items.length === 0 ? (
+          <Card className="p-8 text-center text-muted">{t('dvldAdmin.empty')}</Card>
+        ) : (
+          <div className="space-y-2">
+            {list.data.items.map((p) => (
+              <DvldRow key={`${p.id}-${p.price}`} plate={p} onChanged={reload} />
+            ))}
+            {list.data.items.length < list.data.total && (
+              <Button variant="secondary" onClick={() => setPages((n) => n + 1)} className="mx-auto mt-3 max-w-[280px]">
+                {t('search.showMore')}
+              </Button>
+            )}
+          </div>
+        )}
+      </Container>
     </main>
   )
 }

@@ -6,7 +6,7 @@ import { formatNumber } from '../lib/hooks'
 import { useFavorites } from '../store/favorites'
 import type { Plate } from '../types'
 import { Plate as PlateArt, PlateTile } from './Plate'
-import { Badge, CategoryBadge, cx, Price, VerifiedBadge } from './ui'
+import { Badge, CategoryBadge, cx, OwnershipBadge, Price, VerifiedBadge } from './ui'
 
 export function HeartButton({ id, className, size = 20 }: { id: string; className?: string; size?: number }) {
   const { has, toggle } = useFavorites()
@@ -42,11 +42,11 @@ export function Views({ count }: { count: number }) {
   )
 }
 
-function ContactHint() {
+function ContactHint({ dvld }: { dvld?: boolean }) {
   const { t } = useTranslation()
   return (
     <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#a8884a]">
-      {t('common.contact')}
+      {dvld ? t('ownership.buyAtDvld') : t('common.contact')}
       <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1 rtl:-scale-x-100 rtl:group-hover:-translate-x-1" aria-hidden />
     </span>
   )
@@ -69,11 +69,15 @@ export function FeaturedCard({ plate }: { plate: Plate }) {
           <Crown size={13} strokeWidth={2.4} aria-hidden /> {t('home.premium')}
         </span>
         <Price value={plate.price} className="mt-1 text-[24px] font-extrabold text-white lg:text-[36px]" />
-        <span className="text-[11px] text-white/55">{t('home.asking')}</span>
-        {plate.verified && (
-          <span className="inline-flex items-center gap-1 text-[12px] text-success">
-            <BadgeCheck size={14} aria-hidden /> {t('common.verifiedSeller')}
-          </span>
+        <span className="text-[11px] text-white/55">{plate.ownership === 'dvld' ? t('ownership.officialPrice') : t('home.asking')}</span>
+        {plate.ownership === 'dvld' ? (
+          <OwnershipBadge ownership="dvld" className="!bg-sky-400/15 !text-sky-300" />
+        ) : (
+          plate.verified && (
+            <span className="inline-flex items-center gap-1 text-[12px] text-success">
+              <BadgeCheck size={14} aria-hidden /> {t('common.verifiedSeller')}
+            </span>
+          )
         )}
         <span className="inline-flex items-center gap-1 text-[12px] text-white/55">
           <MapPin size={13} aria-hidden /> {t(`governorate.${plate.governorate}`)}
@@ -93,13 +97,13 @@ export function GridCard({ plate }: { plate: Plate }) {
         </span>
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-        {plate.verified && <VerifiedBadge />}
+        <OwnershipBadge ownership={plate.ownership} />
         <CategoryBadge category={plate.category} />
       </div>
       <Price value={plate.price} className="mt-2 text-[18px] font-bold" />
       <div className="mt-1 flex items-center justify-between">
         <Views count={plate.views} />
-        <ContactHint />
+        <ContactHint dvld={plate.ownership === 'dvld'} />
       </div>
     </Link>
   )
@@ -113,14 +117,19 @@ export function ResultRow({ plate }: { plate: Plate }) {
       <div className="min-w-0 flex-1">
         <Price value={plate.price} className="text-[18px] font-bold" />
         <p className="text-[12px] text-muted">{t(`category.${plate.category}`)}</p>
-        {plate.verified && <VerifiedBadge />}
+        <div className="mt-0.5 flex flex-wrap gap-1">
+          <OwnershipBadge ownership={plate.ownership} />
+          {plate.ownership === 'owned' && plate.verified && <VerifiedBadge />}
+        </div>
       </div>
       <div className="flex flex-col items-end gap-2">
         <div className="flex items-center gap-2">
           <Views count={plate.views} />
           <HeartButton id={plate.id} />
         </div>
-        <Badge className="!px-3 !py-2 !text-[11px] transition-colors group-hover:bg-gold group-hover:text-ink">{t('common.contact')}</Badge>
+        <Badge className="!px-3 !py-2 !text-[11px] transition-colors group-hover:bg-gold group-hover:text-ink">
+          {plate.ownership === 'dvld' ? t('ownership.buyAtDvld') : t('common.contact')}
+        </Badge>
       </div>
     </Link>
   )
@@ -135,11 +144,7 @@ export function RecentRow({ plate }: { plate: Plate }) {
         <p className="text-[11px] text-muted">{t(`category.${plate.category}`)}</p>
         <Price value={plate.price} className="text-[16px] font-bold" />
       </div>
-      {plate.verified && (
-        <span className="inline-flex items-center gap-1 text-[11px] text-success">
-          <BadgeCheck size={13} aria-hidden /> {t('common.verified')}
-        </span>
-      )}
+      <OwnershipBadge ownership={plate.ownership} />
       <ChevronRight size={20} className="text-line transition duration-300 group-hover:translate-x-1 group-hover:text-gold rtl:-scale-x-100 rtl:group-hover:-translate-x-1" aria-hidden />
     </Link>
   )

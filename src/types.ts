@@ -44,6 +44,8 @@ export interface Plate {
   weeklyChange: number
   sold: boolean
   status: ListingStatus
+  /** owned: a person resells it. dvld: DVLD still sells it, nobody has bought it yet */
+  ownership: 'owned' | 'dvld'
   sellerId: string
   sellerName: string
   publishedAt: string | null
@@ -81,6 +83,7 @@ export interface PlateQuery {
   maxPrice?: number
   sort?: SortKey
   limit?: number
+  ownership?: 'owned' | 'dvld'
 }
 
 export type NotificationType =
@@ -174,6 +177,7 @@ export interface AdminDashboardData {
   newUsersThisWeek: number
   pendingVerifications: number
   activeListings: number
+  dvldListings: number
   pendingListings: number
   soldListings: number
   openReports: number
@@ -229,4 +233,16 @@ export interface Report {
   reporterName: string | null
   reportedUserId: string | null
   reportedUserName: string | null
+}
+
+/** A plate DVLD still sells, as the admin's "DVLD plates" page lists it */
+export interface DvldPlate {
+  id: string
+  code: string
+  price: number
+  category: Category
+  governorate: Governorate
+  views: number
+  interested: number
+  createdAt: string
 }

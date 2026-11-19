@@ -154,7 +154,7 @@ export function Search() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
   const [input, setInput] = useState(q)
-  const [filter, setFilter] = useState<'all' | 'verified' | 'under' | 'special'>('all')
+  const [filter, setFilter] = useState<'all' | 'dvld' | 'owned' | 'verified' | 'under' | 'special'>('all')
   const [sort, setSort] = useState<SortKey>('latest')
 
   const query: PlateQuery = {
@@ -163,6 +163,7 @@ export function Search() {
     verifiedOnly: filter === 'verified' || undefined,
     maxPrice: filter === 'under' ? 5000 : undefined,
     category: filter === 'special' ? 'special' : undefined,
+    ownership: filter === 'dvld' || filter === 'owned' ? filter : undefined,
   }
   const { data, loading, error, retry } = useAsync(() => searchPlates(query), [q, sort, filter])
 
@@ -252,6 +253,12 @@ export function Search() {
             <div className="no-scrollbar -mx-5 mt-3 flex gap-2 overflow-x-auto px-5 py-1">
               <Chip active={filter === 'all'} onClick={() => setFilter('all')}>
                 {t('category.all')}
+              </Chip>
+              <Chip active={filter === 'dvld'} onClick={() => setFilter('dvld')}>
+                {t('ownership.filterDvld')}
+              </Chip>
+              <Chip active={filter === 'owned'} onClick={() => setFilter('owned')}>
+                {t('ownership.filterOwned')}
               </Chip>
               <Chip active={filter === 'verified'} onClick={() => setFilter('verified')}>
                 {t('search.verified')}

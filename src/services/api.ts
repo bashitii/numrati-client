@@ -2,6 +2,7 @@
 import type {
   AdminDashboardData,
   AdminListing,
+  DvldPlate,
   ChatMessage,
   Conversation,
   EstimateInput,
@@ -160,4 +161,10 @@ export const admin = {
   },
   updateReport: (id: number, status: ReportStatus, note?: string) => http.patch(`/admin/reports/${id}`, { status, note }),
   banUser: (id: string, reason?: string) => http.post(`/admin/users/${id}/ban`, { reason }),
+  // DVLD plates (numbers DVLD still sells)
+  dvldPlates: (search: string, page: number) => http.get<{ items: DvldPlate[]; total: number }>(`/admin/dvld${qs({ search, page })}`),
+  addDvldPlates: (plates: { code: string; price: number }[]) =>
+    http.post<{ added: number; skipped: { code: string; reason: string }[] }>('/admin/dvld', { plates }),
+  updateDvldPrice: (id: string, price: number) => http.patch(`/admin/dvld/${id}`, { price }),
+  removeDvldPlate: (id: string) => http.post(`/admin/dvld/${id}/remove`),
 }
