@@ -9,6 +9,7 @@ import { Views } from '../components/PlateCards'
 import { Avatar, Badge, Button, Card, Container, cx, Field, FileDrop, PageHeader, Price, SectionHead, SelectField, SkeletonCards } from '../components/ui'
 import { errorText, formatNumber, useAsync } from '../lib/hooks'
 import { createListing, detectTraits, estimatePrice, getAnalytics, getMyListings, markSold, removeListing, updateListing } from '../services/api'
+import { formatPlateCode, PLATE_CODE_PATTERN } from '../lib/plate'
 import { useAuth } from '../store/auth'
 import type { Category, Governorate, ListingStatus } from '../types'
 import { FormError } from './Auth'
@@ -189,7 +190,6 @@ export function SellerDashboard() {
   )
 }
 
-const CODE_PATTERN = /^\d{1,2}-\d{1,5}$/
 
 function StepTitle({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
   return (
@@ -239,7 +239,7 @@ export function AddListing() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
 
-  const codeValid = CODE_PATTERN.test(code)
+  const codeValid = PLATE_CODE_PATTERN.test(code)
   const labels = [t('listing.stepInfo'), t('listing.stepOwner'), t('listing.stepPrice'), t('listing.stepPublish')]
   const nextLabels = [t('listing.nextOwner'), t('listing.nextPrice'), t('listing.nextPublish'), t('listing.publish')]
 
@@ -303,7 +303,8 @@ export function AddListing() {
                 inputMode="numeric"
                 placeholder={t('listing.numberPh')}
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/[^\d-]/g, ''))}
+                maxLength={8}
+                onChange={(e) => setCode(formatPlateCode(e.target.value))}
                 error={touched && !codeValid ? t('listing.numberError') : undefined}
               />
               <SelectField label={t('listing.category')} value={category} onChange={(e) => setCategory(e.target.value as Category)} options={categoryOptions.map((v) => ({ value: v, label: t(`category.${v}`) }))} />

@@ -187,7 +187,7 @@ export const en = {
     info: 'Plate Information',
     number: 'Plate Number',
     numberPh: 'e.g. 15-51552',
-    numberError: 'Use the format 15-51552',
+    numberError: 'Use 1–2 digits (1 to 99), a dash, then 1–5 digits, e.g. 1-22222 or 15-51552',
     category: 'Category',
     governorate: 'Governorate',
     preview: 'Live Preview',

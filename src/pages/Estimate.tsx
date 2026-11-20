@@ -28,12 +28,12 @@ import { Views } from '../components/PlateCards'
 import { BackButton, Badge, Button, Card, Container, cx, Field, PageHeader, Price, SelectField, SkeletonCards } from '../components/ui'
 import { errorText, formatNumber, useAsync } from '../lib/hooks'
 import { detectTraits, estimatePrice, getPlates, saveEstimate } from '../services/api'
+import { formatPlateCode, PLATE_CODE_PATTERN } from '../lib/plate'
 import { useAuth } from '../store/auth'
 import { FormError } from './Auth'
 import type { Category, EstimateResult, Governorate } from '../types'
 import { categoryOptions, governorateOptions } from './Seller'
 
-const CODE_PATTERN = /^\d{1,2}-\d{1,5}$/
 type Trait = 'sequential' | 'repeated' | 'short' | 'specialLetters'
 const traitLabels: Record<Trait, string> = { sequential: 'sequential', repeated: 'repeated', short: 'short', specialLetters: 'special' }
 const traitIcons: Record<Trait, LucideIcon> = { sequential: ListOrdered, repeated: Repeat, short: Minimize2, specialLetters: Gem }
@@ -48,10 +48,10 @@ export function EstimateInputPage() {
   const [touched, setTouched] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
-  const valid = CODE_PATTERN.test(code)
+  const valid = PLATE_CODE_PATTERN.test(code)
 
   const updateCode = (value: string) => {
-    const next = value.replace(/[^\d-]/g, '')
+    const next = formatPlateCode(value)
     setCode(next)
     setTraits((prev) => ({ ...prev, ...detectTraits(next) }))
   }
@@ -97,6 +97,7 @@ export function EstimateInputPage() {
               inputMode="numeric"
               placeholder="10-232"
               value={code}
+              maxLength={8}
               onChange={(e) => updateCode(e.target.value)}
               error={touched && !valid ? t('listing.numberError') : undefined}
             />
