@@ -37,7 +37,7 @@ src/
 
 `.env.example` lists the optional setting `VITE_API_URL`, for when the API is hosted somewhere other than `localhost:4000`.
 
-The Sanadak assistant page (`pages/Assistant.tsx`) sends questions to the API at `/api/chat`. The API passes them to the Sanadak agent in Google Cloud (Conversational Agents), so the website needs no AI key.
+The Sanadak assistant page (`pages/Assistant.tsx`) sends questions to the API at `/api/chat`. The API asks Gemini on Vertex AI (with our knowledge base) and streams the answer back, so it appears word by word. Signed-in users get a history of their chats in the side panel. The website needs no AI key.
 
 ## Build
 
@@ -50,7 +50,7 @@ npm run build   # type-checks, then writes the static site to dist/
 ```mermaid
 flowchart LR
   B[Browser<br/>React website] -- "REST /api + login token" --> S[Express API<br/>business rules]
-  S -- "/api/chat questions" --> A[Sanadak agent<br/>GCP Conversational Agents]
+  S -- "/api/chat questions (streamed)" --> A[Sanadak<br/>Gemini on Vertex AI + knowledge base]
   S -- "SQL (DATABASE_URL)" --> D[(Supabase Postgres)]
   S -- "sign-up, login, token check" --> AU[Supabase Auth]
   S -- "upload + signed links" --> ST[Supabase Storage<br/>ID photos, ownership docs]

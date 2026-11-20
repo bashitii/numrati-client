@@ -62,6 +62,13 @@ function refreshSession() {
   return refreshing
 }
 
+/** The login token to send with a request, renewed first if it is about to run out (null for guests) */
+export async function freshToken() {
+  const session = getSession()
+  if (session && session.expiresAt * 1000 < Date.now() + 60_000) await refreshSession()
+  return getSession()?.accessToken ?? null
+}
+
 type Body = Record<string, unknown> | FormData | undefined
 
 async function send<T>(method: string, path: string, body?: Body, retry = true): Promise<T> {

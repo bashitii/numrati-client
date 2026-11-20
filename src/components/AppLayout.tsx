@@ -110,8 +110,10 @@ function BottomNav() {
 export function AppLayout() {
   const { pathname } = useLocation()
   const showBottom = withBottomNav.includes(pathname)
+  // Sanadak fills the whole screen, so it gets no extra space at the bottom
+  const fullScreen = pathname === '/assistant'
   return (
-    <div className={cx('min-h-dvh bg-offwhite lg:pb-10', showBottom && 'pb-[92px]')}>
+    <div className={cx('min-h-dvh bg-offwhite', !fullScreen && 'lg:pb-10', showBottom && 'pb-[92px]')}>
       <TopNav />
       {/* Keyed by path so every screen change plays a soft entrance */}
       <div key={pathname} className="animate-page">
